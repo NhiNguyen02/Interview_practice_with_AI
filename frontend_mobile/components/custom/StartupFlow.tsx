@@ -1,0 +1,94 @@
+import { useEffect, useState } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { Asset } from 'expo-asset';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import SplashScreen from '@/components/custom/SplashScreen';
+import OnbordingScreen from '@/components/custom/OnbordingScreen';
+
+const bgImage = require('../../assets/images/background.png');
+interface StartupFlowProps {
+    children: React.ReactNode;
+    onFinish: () => void;
+}
+
+export default function StartupFlow({ children }: StartupFlowProps) {
+  const [ready, setReady] = useState(false);
+  const [isSplashVisible, setSplashVisible] = useState(true);
+  const [isOnboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+  // Kiểm tra Onboarding
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const completed = await AsyncStorage.getItem('onboardingCompleted');
+        if (completed === 'true') setOnboardingCompleted(true);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setCheckingOnboarding(false);
+      }
+    };
+    checkOnboarding();
+  }, []);
+
+  // Preload ảnh
+  useEffect(() => {
+    const preload = async () => {
+      try {
+        await Promise.all([
+          Asset.fromModule(bgImage).downloadAsync(),
+          // preload thêm ảnh nếu cần
+        ]);
+        setReady(true);
+      } catch (error) {
+        console.error('Error preloading assets:', error);
+      }
+    };
+    preload();
+  }, []);
+
+  // Loading khi chưa sẵn sàng
+  if (!ready || checkingOnboarding) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    );
+  }
+
+  // Splash
+  if (isSplashVisible) {
+    return (
+      <SplashScreen
+        onFinish={() => setSplashVisible(false)}
+        background={bgImage}
+      />
+    );
+  }
+
+//   // Onboarding
+//   if (!isOnboardingCompleted) {
+//     return (
+//       <OnbordingScreen
+//         onFinish={async () => {
+//           await AsyncStorage.setItem('onboardingCompleted', 'true');
+//           setOnboardingCompleted(true);
+//         }}
+//       />
+//     );
+//   }
+
+  // Trả về app chính
+  return children;
+}
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#190D38',
+  },
+});

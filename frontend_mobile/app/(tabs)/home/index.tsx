@@ -1,159 +1,239 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
   Image,
   TouchableOpacity,
-  StatusBar 
+  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
 import BackgroundContainer from '../../../components/common/BackgroundContainer';
-import { LinearGradient } from 'expo-linear-gradient';
+
+// ====== Mock: lịch sử gần đây (có thể thay bằng data thật) ======
+type HistoryItem = {
+  id: string;
+  date: string;
+  title: string;
+  score: number;
+  questions: number;
+  duration: number;
+};
+const historyData: HistoryItem[] = [
+  { id: '1', date: 'Hôm nay • 14:30', title: 'Phỏng vấn IT - Senior Developer', score: 8.2, questions: 5, duration: 12 },
+  { id: '2', date: 'Hôm nay • 09:15', title: 'Phỏng vấn Marketing - Manager', score: 7.8, questions: 4, duration: 8 },
+  { id: '3', date: 'Hôm qua • 16:40', title: 'Phỏng vấn Product - Associate', score: 6.5, questions: 5, duration: 10 },
+  { id: '4', date: '2 ngày trước • 11:10', title: 'Phỏng vấn QA - Junior', score: 7.1, questions: 4, duration: 9 },
+];
 
 export default function HomeScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { user } = useAuth();
   const [greeting, setGreeting] = useState('Chào buổi sáng');
-  
-  // Cập nhật lời chào dựa vào thời gian trong ngày
+
   useEffect(() => {
     const hour = new Date().getHours();
-    if (hour < 12) {
-      setGreeting('Chào buổi sáng');
-    } else if (hour < 18) {
-      setGreeting('Chào buổi chiều');
-    } else {
-      setGreeting('Chào buổi tối');
-    }
+    if (hour < 12) setGreeting('Chào buổi sáng');
+    else if (hour < 18) setGreeting('Chào buổi chiều');
+    else setGreeting('Chào buổi tối');
   }, []);
-  
-  // Các phương thức xử lý
-  const handleStartInterview = () => {
-    router.push('/interview');
+
+  const top3 = useMemo(() => historyData.slice(0, 3), []);
+
+  const handleStartInterview = () => router.push('/interview');
+  const handleViewHistory = () => router.push('/(tabs)/history');
+  // const handleViewProgress = () => router.push('/(tabs)/progress');
+
+  const getScoreColor = (score: number): string => {
+    if (score >= 8) return '#2CE59A';
+    if (score >= 6) return '#2196F3';
+    if (score >= 4) return '#FF9800';
+    return '#F44336';
   };
-  
-  const handleViewHistory = () => {
-    router.push('/(tabs)/history');
-  };
-  
-  const handleViewProgress = () => {
-    router.push('/(tabs)/progress');
-  };
-  
+
+  const renderHistoryItem = ({ item }: { item: HistoryItem }) => (
+    <TouchableOpacity
+      style={styles.historyItem}
+      onPress={() =>
+        router.push({ pathname: '/(tabs)/history/details/[id]', params: { id: item.id } })
+      }
+    >
+      <View style={styles.historyItemContent}>
+        <Text style={[styles.historyTitle, { color: theme.colors.text }]} numberOfLines={1}>
+          {item.title}
+        </Text>
+        <View style={styles.historyDetails}>
+          <Text style={[styles.historyDate, { color: theme.colors.textSecondary }]}>
+            {item.date}
+          </Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statsSubRow}>
+              <MaterialCommunityIcons
+                name="comment-question-outline"
+                size={14}
+                color={theme.colors.textSecondary}
+                style={styles.itemIcon}
+              />
+              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>
+                {item.questions} câu
+              </Text>
+            </View>
+            <View style={styles.statsSubRow}>
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={14}
+                color={theme.colors.textSecondary}
+                style={[styles.itemIcon, styles.clockIcon]}
+              />
+              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>
+                {item.duration} phút
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.scoreContainer}>
+        <Text
+          style={[
+            styles.historyScore,
+            { backgroundColor: getScoreColor(item.score), color: '#fff' },
+          ]}
+        >
+          {item.score.toFixed(1)}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <BackgroundContainer withOverlay={false}>
       <StatusBar barStyle="light-content" />
-      
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Header Section */}
-        <View style={styles.header}>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* Top bar brand + actions */}
+        
+        <View style={styles.brandRow}>
           <View>
-            <Text style={styles.greeting}>{greeting},</Text>
-            <Text style={styles.userName}>{user?.username || 'Người dùng'}</Text>
+            <Text style={styles.brand}>
+              <Text style={{ color: '#7CF3FF' }}>Prep</Text>
+              <Text style={{ color: '#5ee7d9' }}>Talk</Text>
+            </Text>
+            <Text style={{ color: '#B0BEC5' }}>Giúp bạn luyện tập phỏng vấn</Text>
           </View>
-          <TouchableOpacity 
-            style={styles.profileButton}
-            onPress={() => router.push('/(tabs)/settings')}
-          >
-            {user?.profilePicture ? (
-              <Image 
-                source={{ uri: user.profilePicture }}
-                style={styles.profileImage} 
-              />
-            ) : (
-              <Image 
-                source={require('../../../assets/images/default-avatar.png')}
-                style={styles.profileImage} 
-              />
-            )}
+          
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity style={styles.roundBtn}>
+              <MaterialCommunityIcons name="bell-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.roundBtn}
+              onPress={() => router.push('/(tabs)/settings')}
+            >
+              <MaterialCommunityIcons name="account-circle-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Greeting */}
+        <Text style={styles.hello}>
+          {greeting}, <Text style={{ fontWeight: '800' }}>{user?.username || 'bạn'}</Text>!
+          ✌️
+        </Text>
+
+        {/* Streak card */}
+        <LinearGradient
+          colors={['rgba(86,0,255,0.45)', 'rgba(0,201,255,0.25)']}
+          start={{ x: 0.05, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.card, styles.cardBorder]}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View>
+              <Text style={styles.streakTitle}>Chuỗi 7 ngày liên tiếp!</Text>
+              <Text style={styles.streakDesc}>Bạn đang làm rất tốt! Tiếp tục phát huy nhé.</Text>
+            </View>
+            <MaterialCommunityIcons name="fire" size={22} color="#FFB266" />
+          </View>
+        </LinearGradient>
+
+        {/* CTA card */}
+        <View style={[styles.ctaCard, styles.cardBorder]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.ctaTitle}>Sẵn sàng luyện tập?</Text>
+            <Text style={styles.ctaDesc}>Bắt đầu buổi phỏng vấn tiếp theo</Text>
+          </View>
+          <TouchableOpacity onPress={handleStartInterview} activeOpacity={0.9}>
+            <LinearGradient
+              colors={['#7CF3FF', '#69E6FF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.ctaBtn}
+            >
+              <Text style={styles.ctaBtnText}>Bắt đầu phỏng vấn ›</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
-        
-        {/* Main Action Button - Interview Practice */}
-        <TouchableOpacity 
-          style={styles.mainActionButton}
-          onPress={handleStartInterview}
-        >
-          <LinearGradient
-            colors={['rgba(94, 231, 217, 0.8)', 'rgba(74, 211, 197, 0.9)']}
-            style={styles.gradientButton}
-          >
-            <MaterialCommunityIcons name="microphone" size={24} color="#fff" />
-            <Text style={styles.mainActionText}>Bắt đầu phỏng vấn</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-        
-        {/* Stats Overview */}
-        <View style={styles.statsContainer}>
-          <View style={[styles.statCard, { backgroundColor: theme.colors.card }]}>
-            <View style={styles.statHeader}>
-              <Text style={styles.statTitle}>Phỏng vấn đã hoàn thành</Text>
-              <MaterialCommunityIcons name="check-circle" size={20} color="#5ee7d9" />
-            </View>
-            <Text style={styles.statValue}>12</Text>
-            <TouchableOpacity style={styles.statLink} onPress={handleViewHistory}>
-              <Text style={styles.statLinkText}>Xem lịch sử</Text>
-              <MaterialCommunityIcons name="chevron-right" size={16} color={theme.colors.primary} />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={[styles.statCard, { backgroundColor: theme.colors.card }]}>
-            <View style={styles.statHeader}>
-              <Text style={styles.statTitle}>Điểm trung bình</Text>
-              <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
-            </View>
-            <Text style={styles.statValue}>8.5</Text>
-            <TouchableOpacity style={styles.statLink} onPress={handleViewProgress}>
-              <Text style={styles.statLinkText}>Xem tiến độ</Text>
-              <MaterialCommunityIcons name="chevron-right" size={16} color={theme.colors.primary} />
-            </TouchableOpacity>
+
+        {/* Robot + stats */}
+        <View style={styles.robotRow}>
+          <Image
+            source={require('../../../assets/images/friendly_robot.png')}
+            style={styles.robot}
+            resizeMode="contain"
+          />
+          <View style={{ flex: 1, gap: 10 }}>
+            <LinearGradient
+              colors={['rgba(86,0,255,0.45)', 'rgba(0,201,255,0.25)']}
+              start={{ x: 0.05, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.smallStat, styles.cardBorder]}
+            >
+              <View style={styles.statInline}>
+                <Text style={styles.smallLabel}>Tiến trình của bạn</Text>
+                <MaterialCommunityIcons name="trending-up" size={20} color="#7CF3FF" />
+              </View>
+              <Text style={styles.smallValue}>12</Text>
+              <Text style={styles.smallSub}>Buổi luyện tập đã hoàn thành</Text>
+            </LinearGradient>
+
+            <LinearGradient
+              colors={['rgba(86,0,255,0.45)', 'rgba(0,201,255,0.25)']}
+              start={{ x: 0.05, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.smallStat, styles.cardBorder]}
+            >
+              <View style={styles.statInline}>
+                <Text style={styles.smallLabel}>Điểm trung bình</Text>
+                <MaterialCommunityIcons name="medal-outline" size={20} color="#7CF3FF" />
+              </View>
+              <Text style={styles.smallValue}>8.4/10</Text>
+              <Text style={styles.smallSub}>5 buổi luyện tập gần nhất</Text>
+            </LinearGradient>
           </View>
         </View>
-        
-        {/* Recent Activity */}
+
+        {/* History */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Hoạt động gần đây</Text>
+            <Text style={styles.sectionTitle}>Lịch sử</Text>
             <TouchableOpacity onPress={handleViewHistory}>
-              <Text style={styles.seeAllText}>Xem tất cả</Text>
+              <Text style={styles.seeAllText}>Tất cả</Text>
             </TouchableOpacity>
           </View>
-          
-          {/* Recent activity items */}
-          <View style={[styles.activityItem, { backgroundColor: theme.colors.card }]}>
-            <View style={styles.activityLeftContent}>
-              <MaterialCommunityIcons name="file-document-outline" size={24} color={theme.colors.primary} />
-              <View style={styles.activityTextContainer}>
-                <Text style={styles.activityTitle}>Phỏng vấn React Native</Text>
-                <Text style={styles.activityDate}>10/08/2025 - 15:30</Text>
-              </View>
-            </View>
-            <Text style={styles.activityScore}>8/10</Text>
-          </View>
-          
-          <View style={[styles.activityItem, { backgroundColor: theme.colors.card }]}>
-            <View style={styles.activityLeftContent}>
-              <MaterialCommunityIcons name="file-document-outline" size={24} color={theme.colors.primary} />
-              <View style={styles.activityTextContainer}>
-                <Text style={styles.activityTitle}>Phỏng vấn JavaScript</Text>
-                <Text style={styles.activityDate}>05/08/2025 - 10:15</Text>
-              </View>
-            </View>
-            <Text style={styles.activityScore}>7/10</Text>
-          </View>
+
+          {top3.map((item) => (
+            <View key={item.id}>{renderHistoryItem({ item })}</View>
+          ))}
         </View>
-        
-        {/* Bottom spacing to avoid tab bar overlay */}
-        <View style={styles.bottomSpacer} />
+
+        <View style={{ height: 80 }} />
       </ScrollView>
     </BackgroundContainer>
   );
@@ -163,141 +243,97 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 8,
   },
-  header: {
+
+  // Brand row
+  brandRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
-  greeting: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 16,
+  brand: { fontSize: 22, fontWeight: '900' },
+  roundBtn: {
+    width: 42, height: 42, borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
-  userName: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
+
+  // Greeting
+  hello: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 10,
   },
-  profileButton: {
-    height: 48,
-    width: 48,
-    borderRadius: 24,
-    backgroundColor: '#5ee7d9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileImage: {
-    height: 48,
-    width: 48,
-    borderRadius: 24,
-  },
-  mainActionButton: {
-    marginVertical: 20,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  gradientButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-  },
-  mainActionText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  statCard: {
-    width: '48%',
+
+  // Cards
+  card: {
     borderRadius: 16,
-    padding: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  statHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  statTitle: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 12,
-    flex: 1,
-  },
-  statValue: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  statLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statLinkText: {
-    color: '#5ee7d9',
-    fontSize: 12,
-    marginRight: 5,
-  },
-  sectionContainer: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    padding: 14,
     marginBottom: 12,
   },
-  sectionTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  seeAllText: {
-    color: '#5ee7d9',
-    fontSize: 14,
-  },
-  activityItem: {
+  cardBorder: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
+  streakTitle: { color: '#7CF3FF', fontWeight: '800', marginBottom: 4 },
+  streakDesc: { color: 'rgba(255,255,255,0.85)' },
+
+  ctaCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    gap: 12,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  ctaTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  ctaDesc: { color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 2 },
+  ctaBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     borderRadius: 12,
-    padding: 15,
-    marginBottom: 10,
   },
-  activityLeftContent: {
+  ctaBtnText: { color: '#fff',fontSize: 16, fontWeight: '800' },
+
+  // Robot + stats
+  robotRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginTop: 2, marginBottom: 10 },
+  robot: { width: 96, height: 150 },
+  smallStat: { flex: 1, borderRadius: 16, padding: 12 },
+  statInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  smallLabel: { color: '#DFF9FF', fontWeight: '700' },
+  smallValue: { color: '#FFFFFF', fontWeight: '900', fontSize: 18, marginTop: 4 },
+  smallSub: { color: 'rgba(255,255,255,0.85)', marginTop: 2 },
+
+  // Section
+  sectionContainer: { marginTop: 8 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  sectionTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
+  seeAllText: { color: '#7CF3FF',fontSize: 16, fontWeight: '500' },
+
+  // History item (tái sử dụng style nhỏ, tương tự list)
+  historyItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
   },
-  activityTextContainer: {
-    marginLeft: 12,
+  historyItemContent: { flex: 1 },
+  historyTitle: { fontSize: 15, fontWeight: '700', marginBottom: 6 },
+  historyDetails: { flex: 1 },
+  historyDate: { fontSize: 12.5, marginBottom: 4 },
+  statsRow: { flexDirection: 'row', alignItems: 'center' },
+  statsSubRow: { flexDirection: 'row', alignItems: 'center' },
+  itemIcon: { marginRight: 4 },
+  clockIcon: { marginLeft: 10 },
+  statText: { fontSize: 12.5 },
+  scoreContainer: { marginLeft: 12, justifyContent: 'center' },
+  historyScore: {
+    fontSize: 14, fontWeight: '800',
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 999, overflow: 'hidden', textAlign: 'center',
   },
-  activityTitle: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  activityDate: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 12,
-  },
-  activityScore: {
-    color: '#5ee7d9',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  bottomSpacer: {
-    height: 80, // Space to avoid tab bar overlay
-  }
 });

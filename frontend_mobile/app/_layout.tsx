@@ -1,8 +1,10 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 
@@ -40,8 +42,10 @@ function NavigationRoot() {
   
   return (
     <NavigationThemeProvider value={navigationTheme}>
-      <Stack>
+      <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen name="interview" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
@@ -62,8 +66,10 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
-      <NavigationRoot />
-    </ThemeProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <ThemeProvider>
+        <NavigationRoot />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

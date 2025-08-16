@@ -76,39 +76,11 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: 'Cài đặt',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gear" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
         }}
       />
       
-      {/* Ẩn các màn hình phụ để tránh cảnh báo */}
-      {/* <Tabs.Screen
-        name="practice"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="interview/[id]"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="topic/[id]"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="recommendations"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="details"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="analytics"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="goals"
-        options={{ href: null }}
-      /> */}
     </Tabs>
+
   );
 }

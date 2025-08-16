@@ -24,7 +24,7 @@ import { Asset } from 'expo-asset';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import SplashScreen from '@/components/custom/SplashScreen';
-import OnbordingScreen from '@/components/custom/OnbordingScreen';
+// import OnbordingScreen from '@/components/custom/OnbordingScreen';
 
 const bgImage = require('../../assets/images/background.png');
 interface StartupFlowProps {

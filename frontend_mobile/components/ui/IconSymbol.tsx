@@ -12,11 +12,16 @@
 // Fallback for using MaterialIcons on Android and web.
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
-type IconMapping = Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>;
+type IconSource = 'MaterialIcons' | 'MaterialCommunityIcons';
+type IconMapping = Record<
+  SymbolViewProps['name'],
+  { lib: IconSource; name: ComponentProps<typeof MaterialIcons>['name'] | ComponentProps<typeof MaterialCommunityIcons>['name'] }
+>;
 type IconSymbolName = keyof typeof MAPPING;
 
 /**
@@ -25,16 +30,14 @@ type IconSymbolName = keyof typeof MAPPING;
  * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
  */
 const MAPPING = {
-  'house.fill': 'home',
-  'paperplane.fill': 'send',
-  'chevron.left.forwardslash.chevron.right': 'code',
-  'chevron.right': 'chevron-right',
-  // Thêm mapping cho các biểu tượng trong tab bar
-  'chart.bar.fill': 'bar-chart',
-  'clock.fill': 'history',
-  'bookmark.fill': 'bookmark',
-  'gear': 'settings',
-} as IconMapping;
+  'house.fill': { lib: 'MaterialCommunityIcons', name: 'home-outline' },
+  'clock.fill': { lib: 'MaterialIcons', name: 'access-time' },
+  'bookmark.fill': { lib: 'MaterialCommunityIcons', name: 'bookmark-outline' },
+  'chart.bar.fill': { lib: 'MaterialCommunityIcons', name: 'trending-up' },
+  'gearshape.fill': { lib: 'MaterialCommunityIcons', name: 'cog-outline' },
+  'chevron.left.forwardslash.chevron.right': { lib: 'MaterialIcons', name: 'code' },
+  'chevron.right': { lib: 'MaterialIcons', name: 'chevron-right' },
+} as unknown as IconMapping;
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
@@ -53,5 +56,11 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  const mapping = MAPPING[name];
+  if (!mapping) return null;
+
+  if (mapping.lib === 'MaterialCommunityIcons') {
+    return <MaterialCommunityIcons color={color} size={size} name={mapping.name as any} style={style} />;
+  }
+  return <MaterialIcons color={color} size={size} name={mapping.name as any} style={style} />;
 }

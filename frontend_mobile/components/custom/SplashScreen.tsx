@@ -1,4 +1,12 @@
-// SplashScreen.tsx
+/**
+ * SplashScreen.tsx
+ * 
+ * Component hiển thị màn hình chào mừng khi khởi động ứng dụng.
+ * - Hiển thị logo và tên ứng dụng với hiệu ứng animation
+ * - Tự động chuyển sang màn hình chính sau một khoảng thời gian
+ * - Sử dụng Reanimated để tạo các hiệu ứng mượt mà (opacity và scale)
+ * - Được bọc trong AppLayout để có background nhất quán
+ */
 import { StyleSheet } from 'react-native';
 import React, { useEffect } from 'react';
 import Animated, { useSharedValue, withTiming, withSpring, useAnimatedStyle } from 'react-native-reanimated';

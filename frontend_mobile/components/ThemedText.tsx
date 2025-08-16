@@ -1,60 +1,77 @@
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import React from 'react';
+import { Text, TextProps, StyleSheet } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
-import { useThemeColor } from '@/hooks/useThemeColor';
+type TextType = 'title' | 'heading' | 'subheading' | 'body' | 'caption' | 'button' | 'link';
 
 export type ThemedTextProps = TextProps & {
-  lightColor?: string;
   darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
+  lightColor?: string;
+  type?: TextType;
 };
 
-export function ThemedText({
-  style,
-  lightColor,
-  darkColor,
-  type = 'default',
-  ...rest
-}: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+export function ThemedText(props: ThemedTextProps) {
+  const { style, lightColor, darkColor, type = 'body', ...otherProps } = props;
+  const { theme } = useTheme();
 
-  return (
-    <Text
-      style={[
-        { color },
-        type === 'default' ? styles.default : undefined,
-        type === 'title' ? styles.title : undefined,
-        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
-        type === 'subtitle' ? styles.subtitle : undefined,
-        type === 'link' ? styles.link : undefined,
-        style,
-      ]}
-      {...rest}
-    />
-  );
+  const color = theme.dark
+    ? darkColor || theme.colors.text
+    : lightColor || theme.colors.text;
+
+  // Use StyleSheet.create with a function call to avoid TypeScript errors
+  const styles = StyleSheet.create({
+    text: {
+      color,
+      ...getTextStyle(type),
+    },
+  });
+
+  return <Text style={[styles.text, style]} {...otherProps} />;
 }
 
-const styles = StyleSheet.create({
-  default: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  defaultSemiBold: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
-  },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  link: {
-    lineHeight: 30,
-    fontSize: 16,
-    color: '#0a7ea4',
-  },
-});
+// Helper function for getting text styles based on type
+function getTextStyle(type: string) {
+  switch (type) {
+    case 'title':
+      return {
+        fontSize: 32,
+        fontWeight: '700' as const,
+      };
+    case 'heading':
+      return {
+        fontSize: 24,
+        fontWeight: '600' as const,
+      };
+    case 'subheading':
+      return {
+        fontSize: 20,
+        fontWeight: '500' as const,
+      };
+    case 'body':
+      return {
+        fontSize: 16,
+        fontWeight: '400' as const,
+      };
+    case 'caption':
+      return {
+        fontSize: 14,
+        fontWeight: '400' as const,
+      };
+    case 'button':
+      return {
+        fontSize: 18,
+        fontWeight: '500' as const,
+      };
+    case 'link':
+      return {
+        fontSize: 16,
+        fontWeight: '500' as const,
+        textDecorationLine: 'underline' as const,
+      };
+    default:
+      return {
+        fontSize: 16,
+        fontWeight: '400' as const,
+      };
+  }
+}

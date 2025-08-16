@@ -1,10 +1,30 @@
+/**
+ * StartupFlow.tsx
+ * 
+ * Component quản lý luồng khởi động của ứng dụng.
+ * - Điều phối quá trình hiển thị các màn hình khi khởi động
+ * - Quản lý trình tự: Loading -> SplashScreen -> OnboardingScreen -> Main App
+ * - Xử lý preload tài nguyên (hình ảnh, dữ liệu)
+ * - Kiểm tra trạng thái onboarding để quyết định có hiển thị hướng dẫn hay không
+ * - Đảm bảo trải nghiệm mượt mà khi khởi động ứng dụng
+ */
+/**
+ * StartupFlow.tsx
+ * 
+ * Component quản lý luồng khởi động của ứng dụng.
+ * - Điều phối quá trình hiển thị các màn hình khi khởi động
+ * - Quản lý trình tự: Loading -> SplashScreen -> OnboardingScreen -> Main App
+ * - Xử lý preload tài nguyên (hình ảnh, dữ liệu)
+ * - Kiểm tra trạng thái onboarding để quyết định có hiển thị hướng dẫn hay không
+ * - Đảm bảo trải nghiệm mượt mà khi khởi động ứng dụng
+ */
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Asset } from 'expo-asset';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import SplashScreen from '@/components/custom/SplashScreen';
-import OnbordingScreen from '@/components/custom/OnbordingScreen';
+// import OnbordingScreen from '@/components/custom/OnbordingScreen';
 
 const bgImage = require('../../assets/images/background.png');
 interface StartupFlowProps {

@@ -1,14 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
 
-const EditProfile = () => {
+const InterviewVoice = () => {
   return (
     <View>
-      <Text>EditProfile</Text>
+      <Text>InterviewVoice</Text>
     </View>
   )
 }
 
-export default EditProfile
+export default InterviewVoice
 
-const styles = StyleSheet.create({})

@@ -1,11 +1,14 @@
 // components/AppLayout.tsx
-import { ImageBackground, StyleSheet, View } from 'react-native';
+import { Dimensions, ImageBackground, StyleSheet, View } from 'react-native';
 import React from 'react';
+import { Images } from '@/constants/Image';
 
+
+const { width, height } = Dimensions.get('window');
  function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <ImageBackground
-      source={require('../../assets/images/background.png')}
+      source={Images.background}
       style={styles.bg}
       resizeMode="cover"
     >

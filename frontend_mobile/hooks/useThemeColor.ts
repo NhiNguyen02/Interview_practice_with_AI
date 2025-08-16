@@ -1,21 +1,31 @@
+import { useTheme } from '../context/ThemeContext';
+
 /**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
+ * Custom hook để lấy màu dựa trên theme
+ * @param colorName Tên của màu cần lấy từ theme
+ * @param props Optional override colors cho light và dark mode
+ * @returns Màu tương ứng với theme hiện tại
  */
-
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-export function useThemeColor(
-  props: { light?: string; dark?: string },
-  colorName: keyof typeof Colors.light & keyof typeof Colors.dark
+export default function useThemeColor(
+  colorName: string,
+  props?: { light?: string; dark?: string }
 ) {
-  const theme = useColorScheme() ?? 'light';
-  const colorFromProps = props[theme];
+  const { theme } = useTheme();
+  const isDarkMode = theme.dark;
 
-  if (colorFromProps) {
-    return colorFromProps;
-  } else {
-    return Colors[theme][colorName];
+  // Use prop color if provided, otherwise use theme color
+  if (props) {
+    const colorFromProps = isDarkMode ? props.dark : props.light;
+    if (colorFromProps) {
+      return colorFromProps;
+    }
   }
+
+  // Return theme color based on color name
+  if (colorName in theme.colors) {
+    return theme.colors[colorName as keyof typeof theme.colors];
+  }
+  
+  // Fallback to text color
+  return theme.colors.text;
 }

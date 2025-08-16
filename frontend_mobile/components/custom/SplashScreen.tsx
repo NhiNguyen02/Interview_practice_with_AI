@@ -2,7 +2,6 @@
 import { StyleSheet } from 'react-native';
 import React, { useEffect } from 'react';
 import Animated, { useSharedValue, withTiming, withSpring, useAnimatedStyle } from 'react-native-reanimated';
-import AppLayout from './AppLayout';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -27,10 +26,9 @@ const SplashScreen = ({ onFinish, background }: SplashScreenProps) => {
   }));
 
   return (
-    <AppLayout>
       <Animated.View style={[styles.container, animatedStyle]}>
         <Animated.Image
-          source={require('../../assets/images/Logo_Icon.png')}
+          source={require('../../assets/images/logo.jpg')}
           style={[styles.logo, animatedStyle]}
           resizeMode="contain"
         />
@@ -42,7 +40,6 @@ const SplashScreen = ({ onFinish, background }: SplashScreenProps) => {
           Real-Time AI Voice Agent
         </Animated.Text>
       </Animated.View>
-    </AppLayout>
   );
 };
 
@@ -50,7 +47,7 @@ export default SplashScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%', gap:10 },
-  logo: { width: 150, height: 150},
+  logo: { width: 150, height: 150, borderRadius: 20 },
   title: { fontSize: 36,fontWeight:"bold", color: '#fff' },
   des:{
     fontSize: 16,

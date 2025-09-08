@@ -81,7 +81,7 @@ export default function ForgotPasswordScreen() {
         message="Mã xác thực đã được gửi đến email của bạn!"
         onClose={() => {
           setShowSuccess(false);
-          router.replace('/(auth)/login');
+          router.replace('/(auth)/emailVerification');
         }}
         type="success"
       />
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   sendButtonText: {
-    color: '#1a2744',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },

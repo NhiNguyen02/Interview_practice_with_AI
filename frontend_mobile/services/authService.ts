@@ -30,6 +30,11 @@ export type ResetPasswordRequest = {
   password: string;
 };
 
+export type VerifyResetTokenRequest = {
+  email: string;
+  token: string;
+};
+
 async function handleResponse(res: Response) {
   const rawText = await res.text();
   let data: any = null;
@@ -90,6 +95,15 @@ export async function forgotPassword(request: ForgotPasswordRequest): Promise<{ 
 
 export async function resetPassword(request: ResetPasswordRequest): Promise<{ message: string }> {
   const res = await fetch(`${API_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  return handleResponse(res);
+}
+
+export async function verifyResetToken(request: VerifyResetTokenRequest): Promise<{ message: string }> {
+  const res = await fetch(`${API_URL}/auth/verify-reset-token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),

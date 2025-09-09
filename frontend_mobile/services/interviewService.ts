@@ -298,6 +298,7 @@ export type UserStats = {
   field_distribution: Record<string, any>;
   recent_performance: number[];
   performance_trend: string;
+  recent_chart?: { label: string; value: number }[];
 };
 
 export type StatsResponse = {

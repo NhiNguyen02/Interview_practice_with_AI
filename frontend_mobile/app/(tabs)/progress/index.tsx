@@ -18,15 +18,7 @@ import { Dropdown } from 'react-native-element-dropdown';
 import { getUserStats, UserStats } from '@/services/interviewService';
 import { useFocusEffect } from '@react-navigation/native';
 
-const mockScores = [
-  { label: 'Dec 1', value: 4.8 },
-  { label: 'Dec 5', value: 5.6 },
-  { label: 'Dec 10', value: 3.9 },
-  { label: 'Dec 15', value: 6.7 },
-  { label: 'Dec 20', value: 5.3 },
-  { label: 'Dec 25', value: 6.1 },
-  { label: 'Today', value: 7.6 },
-];
+// Dữ liệu biểu đồ sẽ lấy từ API (recent_chart), fallback từ recent_performance
 
 const filter = [
     { label: '1 ngày', value: '1' },
@@ -34,10 +26,7 @@ const filter = [
     { label: '30 ngày', value: '3' },
   ];
 
-const domains = [
-  { name: 'Software Engineering', score: 8.7 },
-  { name: 'Product Management', score: 7.2 },
-];
+// Lĩnh vực cũng sẽ lấy từ API (field_distribution)
 
 export default function ProgressScreen() {
   const { theme } = useTheme();
@@ -84,14 +73,31 @@ export default function ProgressScreen() {
   };
 
   const maxScore = 10;
-  const stat = useMemo(
-    () => ({
-      total: userStats?.total_sessions || 0,
-      avg: userStats?.average_score || 0,
-      best: userStats?.recent_performance && userStats.recent_performance.length > 0 ? Math.max(...userStats.recent_performance) : 0,
-    }),
-    [userStats]
-  );
+  const stat = useMemo(() => {
+    const total = userStats?.total_sessions || 0;
+    const avg = userStats?.average_score || 0;
+    const values = (userStats?.recent_chart?.map((d) => d.value) || userStats?.recent_performance || []) as number[];
+    const best = values.length > 0 ? Math.max(...values) : 0;
+    return { total, avg, best };
+  }, [userStats]);
+
+  const chartData = useMemo(() => {
+    if (userStats?.recent_chart && userStats.recent_chart.length > 0) {
+      return userStats.recent_chart;
+    }
+    if (userStats?.recent_performance && userStats.recent_performance.length > 0) {
+      return userStats.recent_performance.map((v, idx) => ({ label: `S${idx + 1}`, value: v }));
+    }
+    return [] as { label: string; value: number }[];
+  }, [userStats]);
+
+  const domainData = useMemo(() => {
+    const dist = userStats?.field_distribution || {};
+    const arr = Object.keys(dist).map((name) => ({ name, score: dist[name]?.average_score ?? 0 }));
+    // sắp xếp giảm dần theo điểm
+    arr.sort((a, b) => b.score - a.score);
+    return arr;
+  }, [userStats]);
 
   return (
     <BackgroundContainer withOverlay={false}>
@@ -174,7 +180,7 @@ export default function ProgressScreen() {
 
             {/* cột */}
             <View style={styles.bars}>
-              {mockScores.map((d, idx) => {
+              {chartData.map((d, idx) => {
                 const hPct = (d.value / maxScore) * 100;
                 return (
                   <View key={idx} style={styles.barWrap}>
@@ -193,7 +199,7 @@ export default function ProgressScreen() {
         <View style={[styles.block]}>
           <Text style={styles.blockTitle}>Kết quả theo từng lĩnh vực</Text>
 
-          {domains.map((d) => {
+          {domainData.map((d) => {
             // Calculate width as percentage and cast to valid DimensionValue type
             const widthPct = `${(d.score / 10) * 100}%` as any;
             return (

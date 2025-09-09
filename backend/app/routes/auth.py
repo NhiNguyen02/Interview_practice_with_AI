@@ -224,6 +224,10 @@ def forgot_password():
 
 @auth_bp.route('/reset-password', methods=['POST'])
 def reset_password():
+    """
+    Đặt lại mật khẩu: chỉ thực hiện đổi mật khẩu và xóa token đã cung cấp.
+    Việc kiểm tra hợp lệ của mã 6 chữ số đã được thực hiện ở /auth/verify-reset-token.
+    """
     data = request.get_json(force=True)
     email = data.get('email')
     token = data.get('token')
@@ -233,6 +237,36 @@ def reset_password():
 
     session = get_session()
     try:
+        # Update user password (assumes token has been verified previously)
+        user = session.query(User).filter_by(email=email).first()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        user.password_hash = generate_password_hash(new_password)
+
+        # Delete the used token (best-effort)
+        session.query(PasswordReset).filter_by(email=email, token=token).delete()
+
+        session.commit()
+        return jsonify({'message': 'Password reset successful'}), 200
+    finally:
+        session.close()
+
+
+@auth_bp.route('/verify-reset-token', methods=['POST'])
+def verify_reset_token():
+    data = request.get_json(force=True)
+    email = data.get('email')
+    token = data.get('token')
+    if not email or not token:
+        return jsonify({'error': 'Missing email or token'}), 400
+
+    session = get_session()
+    try:
+        # Ensure user exists (email was validated during request phase as well)
+        user = session.query(User).filter_by(email=email).first()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
         reset = session.query(PasswordReset).filter_by(email=email, token=token).first()
         if not reset:
             return jsonify({'error': 'Invalid token'}), 400
@@ -240,13 +274,7 @@ def reset_password():
             session.query(PasswordReset).filter_by(email=email, token=token).delete()
             session.commit()
             return jsonify({'error': 'Token expired'}), 400
-        user = session.query(User).filter_by(email=email).first()
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
-        user.password_hash = generate_password_hash(new_password)
-        session.query(PasswordReset).filter_by(email=email).delete()
-        session.commit()
-        return jsonify({'message': 'Password reset successful'}), 200
+        return jsonify({'message': 'Token valid'}), 200
     finally:
         session.close()
 

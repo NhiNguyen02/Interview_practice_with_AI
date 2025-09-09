@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import BackgroundContainer from '../../components/common/BackgroundContainer';
 import { IconWrapper } from '../../components/common/IconWrapper';
 import InfoPopup from '../../components/common/InfoPopup';
+import { forgotPassword } from '@/services/authService';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -48,14 +49,12 @@ export default function ForgotPasswordScreen() {
     
     try {
       setIsSubmitting(true);
-      
-      // Mô phỏng thời gian xử lý API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      // Gọi API gửi mã quên mật khẩu
+      await forgotPassword({ email });
       // Hiển thị thành công
       setShowSuccess(true);
-    } catch {
-      showWarningPopup('Lỗi', 'Không thể gửi mã xác thực. Vui lòng thử lại sau.');
+    } catch (error: any) {
+      showWarningPopup('Lỗi', error?.message || 'Không thể gửi mã xác thực. Vui lòng thử lại sau.');
     } finally {
       setIsSubmitting(false);
     }
@@ -81,7 +80,7 @@ export default function ForgotPasswordScreen() {
         message="Mã xác thực đã được gửi đến email của bạn!"
         onClose={() => {
           setShowSuccess(false);
-          router.replace('/(auth)/emailVerification');
+          router.replace({ pathname: '/(auth)/emailVerification', params: { email } });
         }}
         type="success"
       />

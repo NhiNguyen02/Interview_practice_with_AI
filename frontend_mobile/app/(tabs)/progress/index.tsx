@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
     ScrollView,
     StatusBar,
@@ -30,14 +30,18 @@ const filter = [
 
 export default function ProgressScreen() {
   const { theme } = useTheme();
-  const { handleTokenInvalid } = useAuth();
+  const { handleTokenInvalid, user } = useAuth();
   const [value, setValue] = useState(null);
   const [isFocus, setIsFocus] = useState(false);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const inFlightRef = useRef(false);
 
   const loadStats = useCallback(async () => {
     try {
+      if (!user) return;
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
       setIsLoading(true);
       const response = await getUserStats();
       setUserStats(response.stats);
@@ -47,12 +51,11 @@ export default function ProgressScreen() {
       }
     } finally {
       setIsLoading(false);
+      inFlightRef.current = false;
     }
-  }, [handleTokenInvalid]);
+  }, [handleTokenInvalid, user]);
 
-  useEffect(() => {
-    loadStats();
-  }, [loadStats]);
+  // Remove mount-trigger; rely only on focus refresh to avoid duplicate calls
 
   // Refresh data when tab is focused
   useFocusEffect(

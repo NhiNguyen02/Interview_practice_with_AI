@@ -1,11 +1,11 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native'
 import BackgroundContainer from '@/components/common/BackgroundContainer';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { router, useLocalSearchParams } from 'expo-router';
 import InfoPopup from '@/components/common/InfoPopup';
-import { verifyResetToken } from '@/services/authService';
+import { verifyResetToken, forgotPassword } from '@/services/authService';
 const EmailVerification = () => {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const inputsRef = useRef<Array<TextInput | null>>([]);
@@ -14,6 +14,8 @@ const EmailVerification = () => {
   const [showWarning, setShowWarning] = useState(false);
   const [warningTitle, setWarningTitle] = useState('');
   const [warningMessage, setWarningMessage] = useState('');
+  const [secondsLeft, setSecondsLeft] = useState<number>(180);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const showWarningPopup = (title: string, message: string) => {
     setWarningTitle(title);
@@ -60,6 +62,23 @@ const EmailVerification = () => {
       }
       focusInput(index - 1);
     }
+  };
+
+  // Start 3-minute countdown for resend
+  useEffect(() => {
+    if (secondsLeft <= 0) return;
+    timerRef.current = setInterval(() => {
+      setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
+    }, 1000) as unknown as NodeJS.Timeout;
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [secondsLeft]);
+
+  const formatMMSS = (sec: number) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, '0');
+    const s = (sec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
   };
 
   return (
@@ -119,11 +138,31 @@ const EmailVerification = () => {
                 </TouchableOpacity>
 
             </View>
-            <Text style={styles.resendText}>
-                Không nhận được mã?{" "}
-            </Text>
-            
-            <Text style={{ color: "#4dd0e1" }}>Gửi mã lại sau 00:45</Text>
+            <Text style={styles.resendText}>Không nhận được mã?</Text>
+            {secondsLeft > 0 ? (
+              <Text style={{ color: '#4dd0e1' }}>Gửi mã lại sau {formatMMSS(secondsLeft)}</Text>
+            ) : (
+              <TouchableOpacity
+                onPress={async () => {
+                  if (!email) {
+                    showWarningPopup('Lỗi', 'Thiếu địa chỉ email');
+                    return;
+                  }
+                  try {
+                    await forgotPassword({ email: String(email) });
+                    // reset timer and clear current OTP fields
+                    setSecondsLeft(180);
+                    setCode(["", "", "", "", "", ""]);
+                    showWarningPopup('Thông báo', 'Đã gửi lại mã xác thực đến email của bạn.');
+                  } catch (e: any) {
+                    showWarningPopup('Lỗi', e?.message || 'Không thể gửi lại mã. Vui lòng thử lại.');
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ color: '#4dd0e1', fontWeight: '700' }}>Gửi lại mã</Text>
+              </TouchableOpacity>
+            )}
         </View>
       <InfoPopup
         visible={showWarning}

@@ -146,6 +146,8 @@ def evaluate_audio_answer(question_text: str, audio_url: str) -> dict:
 
     prompt = f"""
 Bạn là một chuyên gia phỏng vấn. Đánh giá câu trả lời của ứng viên dựa trên câu hỏi.
+Áp dụng mô hình STAR (Situation, Task, Action, Result) để đánh giá mức độ đầy đủ, logic và tính thuyết phục. 
+Đặc biệt ưu tiên mô tả rõ ràng phần Action (hành động cá nhân) và nêu rõ Result có số liệu minh chứng nếu có.
 
 Câu hỏi: {question_text}
 Câu trả lời: {transcript_text}
@@ -153,8 +155,9 @@ Câu trả lời: {transcript_text}
 Yêu cầu:
 - Chấm điểm tổng thể theo thang 0-10.
 - Chấm chi tiết theo 3 tiêu chí (0-10): speaking, content, relevance.
-- Viết phần feedback ngắn gọn, súc tích.
-- Liệt kê strengths (3-5 điểm mạnh) và improvements (3-5 điểm cần cải thiện).
+- Đánh giá theo khung STAR; nêu nhận xét ngắn gọn trong "feedback" về từng thành phần S/T/A/R (đầy đủ hay thiếu; mạnh hay yếu).
+- Nếu thiếu phần nào của STAR, đề xuất cách bổ sung cụ thể trong "improvements" (ví dụ: nêu rõ bối cảnh, mục tiêu, hành động cụ thể, kết quả định lượng...).
+- Ưu tiên chấm Content và Relevance dựa trên mức độ đầy đủ của STAR; Speaking dựa trên sự mạch lạc, rõ ràng, logic trình bày.
 
 BẮT BUỘC TRẢ VỀ JSON HỢP LỆ, ĐÚNG CHUẨN, KHÔNG THÊM GIẢI THÍCH, VỚI CẤU TRÚC:
 {{
@@ -165,9 +168,9 @@ BẮT BUỘC TRẢ VỀ JSON HỢP LỆ, ĐÚNG CHUẨN, KHÔNG THÊM GIẢI TH�
     "content": 9.0,
     "relevance": 8.5
   }},
-  "feedback": "feedback ngắn gọn về câu trả lời",
+  "feedback": "feedback ngắn gọn về câu trả lời, kèm nhận xét theo STAR (S/T/A/R)",
   "strengths": ["điểm mạnh 1", "điểm mạnh 2", "điểm mạnh 3"],
-  "improvements": ["điểm cần cải thiện 1", "điểm cần cải thiện 2", "điểm cần cải thiện 3"]
+  "improvements": ["điểm cần cải thiện 1 (bổ sung STAR)", "điểm cần cải thiện 2", "điểm cần cải thiện 3"]
 }}
 
 Lưu ý: Chỉ trả về JSON thuần túy, không bọc trong markdown code blocks, không thêm text nào khác.
@@ -222,6 +225,8 @@ def evaluate_text_answer(question_text: str, transcript_text: str) -> dict:
 
     prompt = f"""
 Bạn là một chuyên gia phỏng vấn. Đánh giá câu trả lời của ứng viên dựa trên câu hỏi.
+Áp dụng mô hình STAR (Situation, Task, Action, Result) để đánh giá mức độ đầy đủ, logic và tính thuyết phục. 
+Đặc biệt ưu tiên mô tả rõ ràng phần Action (hành động cá nhân) và nêu rõ Result có số liệu minh chứng nếu có.
 
 Câu hỏi: {question_text}
 Câu trả lời: {transcript_text}
@@ -229,8 +234,9 @@ Câu trả lời: {transcript_text}
 Yêu cầu:
 - Chấm điểm tổng thể theo thang 0-10.
 - Chấm chi tiết theo 3 tiêu chí (0-10): speaking, content, relevance.
-- Viết phần feedback ngắn gọn, súc tích.
-- Liệt kê strengths (3-5 điểm mạnh) và improvements (3-5 điểm cần cải thiện).
+- Đánh giá theo khung STAR; nêu nhận xét ngắn gọn trong "feedback" về từng thành phần S/T/A/R (đầy đủ hay thiếu; mạnh hay yếu).
+- Nếu thiếu phần nào của STAR, đề xuất cách bổ sung cụ thể trong "improvements" (ví dụ: nêu rõ bối cảnh, mục tiêu, hành động cụ thể, kết quả định lượng...).
+- Ưu tiên chấm Content và Relevance dựa trên mức độ đầy đủ của STAR; Speaking dựa trên sự mạch lạc, rõ ràng, logic trình bày.
 
 BẮT BUỘC TRẢ VỀ JSON HỢP LỆ, ĐÚNG CHUẨN, KHÔNG THÊM GIẢI THÍCH, VỚI CẤU TRÚC:
 {{
@@ -241,9 +247,9 @@ BẮT BUỘC TRẢ VỀ JSON HỢP LỆ, ĐÚNG CHUẨN, KHÔNG THÊM GIẢI TH�
     "content": 9.0,
     "relevance": 8.5
   }},
-  "feedback": "feedback ngắn gọn về câu trả lời",
+  "feedback": "feedback ngắn gọn về câu trả lời, kèm nhận xét theo STAR (S/T/A/R)",
   "strengths": ["điểm mạnh 1", "điểm mạnh 2", "điểm mạnh 3"],
-  "improvements": ["điểm cần cải thiện 1", "điểm cần cải thiện 2", "điểm cần cải thiện 3"]
+  "improvements": ["điểm cần cải thiện 1 (bổ sung STAR)", "điểm cần cải thiện 2", "điểm cần cải thiện 3"]
 }}
 
 Lưu ý: Chỉ trả về JSON thuần túy, không bọc trong markdown code blocks, không thêm text nào khác.
@@ -290,7 +296,7 @@ def summarize_transcript(transcript: list[dict], session: InterviewSession | Non
         )
         
         conversation = "\n".join(
-            f"Câu hỏi {i+1}: {t['question']}\nTrả lời: {t['answer']}\nĐiểm: {t['score']}/5\nPhản hồi: {t['feedback']}\n" 
+            f"Câu hỏi {i+1}: {t.get('question','')}\nTrả lời: {t.get('answer','')}\nĐiểm: {t.get('score', 0)}/10\nPhản hồi: {t.get('feedback','')}\n"
             for i, t in enumerate(transcript)
         )
         

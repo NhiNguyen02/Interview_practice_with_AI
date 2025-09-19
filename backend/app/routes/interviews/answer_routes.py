@@ -1,6 +1,7 @@
 import os
 import uuid
 import logging
+import threading
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
@@ -40,7 +41,11 @@ if cloudinary and Cloud_NAME and Cloud_API_KEY and Cloud_API_SECRET:
 @answer_bp.route('/<int:session_id>/answer', methods=['POST'])
 @token_required
 def submit_answer(current_user, session_id):
-    """Upload user's audio answer and evaluate with AI."""
+    """Upload user's answer and queue evaluation in background.
+
+    Optimization: Return quickly so the client can fetch the next question immediately.
+    Heavy work (ASR + LLM evaluation) runs asynchronously and updates DB later.
+    """
     logger.info(f"🎤 Starting audio answer submission for session {session_id} by user {current_user.id}")
     db = get_session()
     try:
@@ -80,7 +85,6 @@ def submit_answer(current_user, session_id):
         logger.info(f"✅ Question validation passed: {question_id}")
 
         audio_url = None
-        eval_json = {}
         question_text = question.content if question else ''
 
         if audio_file:
@@ -118,65 +122,83 @@ def submit_answer(current_user, session_id):
                         return jsonify({'error': 'Upload audio thất bại'}), 500
                     logger.info(f"✅ Audio uploaded to Cloudinary: {audio_url}")
 
-                logger.info(f"🎯 Starting evaluation for question ID: {question_id}")
-                eval_json = evaluate_audio_answer(question_text, audio_url)
-                logger.info("✅ Gemini evaluation completed successfully")
+                # Do not evaluate synchronously; evaluation will run in a background thread
+                logger.info(f"🧵 Queuing async evaluation for audio answer QID={question_id}")
             except Exception as e:
                 logger.error(f"❌ Error handling audio submission: {e}")
                 return jsonify({'error': 'Không thể xử lý file audio'}), 500
         else:
             # Text answer path (e.g., skipped question)
-            try:
-                logger.info(f"🎯 Evaluating text answer for question ID: {question_id}")
-                eval_json = evaluate_text_answer(question_text, text_answer)
-                logger.info("✅ Text evaluation completed successfully")
-            except Exception as e:
-                logger.error(f"❌ Gemini evaluation failed: {e}")
-                eval_json = {
-                    'transcript': text_answer or '',
-                    'score': 0,
-                    'breakdown': {'speaking': 0, 'content': 0, 'relevance': 0},
-                    'feedback': '',
-                    'strengths': [],
-                    'improvements': []
-                }
-                logger.warning(f"⚠️ Using fallback evaluation data: {eval_json}")
+            # Also evaluate asynchronously
+            logger.info(f"🧵 Queuing async evaluation for text answer QID={question_id}")
 
-        logger.info("💾 Saving evaluation results to database...")
-        
-        # Extract and log scores
-        overall_score = float(eval_json.get('score') or 0)
-        speaking_score = float((eval_json.get('breakdown') or {}).get('speaking') or 0)
-        content_score = float((eval_json.get('breakdown') or {}).get('content') or 0)
-        relevance_score = float((eval_json.get('breakdown') or {}).get('relevance') or 0)
-        
-        logger.info(f"📊 Scores to save:")
-        logger.info(f"   ⭐ Overall: {overall_score}")
-        logger.info(f"   🗣️ Speaking: {speaking_score}")
-        logger.info(f"   📚 Content: {content_score}")
-        logger.info(f"   🎯 Relevance: {relevance_score}")
-        
+        # Save initial answer row (pending evaluation)
         answer = InterviewAnswer(
             session_id=session_id,
             question_id=question_id,
-            feedback=eval_json.get('feedback') or None,
-            score=overall_score,
             user_answer_audio_url=audio_url,
-            transcript_text=eval_json.get('transcript') or None,
-            speaking_score=speaking_score,
-            content_score=content_score,
-            relevance_score=relevance_score,
-            strengths=eval_json.get('strengths') or [],
-            improvements=eval_json.get('improvements') or [],
+            transcript_text=text_answer or None,
+            feedback=None,
+            score=None,
+            speaking_score=None,
+            content_score=None,
+            relevance_score=None,
+            strengths=None,
+            improvements=None,
         )
         db.add(answer)
         db.commit()
-        logger.info(f"✅ Answer saved to database successfully")
+        logger.info(f"✅ Initial answer saved (pending eval) id={answer.id}")
+
+        # Kick off background evaluation to fill in scores/feedback
+        def _run_eval_async(answer_id: int, q_text: str, a_url: str | None, t_answer: str | None):
+            logger.info(f"🚀 Async evaluation started for answer {answer_id}")
+            from app.database import SessionLocal, InterviewAnswer as IA
+            local_db = SessionLocal()
+            try:
+                if a_url:
+                    eval_json = evaluate_audio_answer(q_text, a_url)
+                else:
+                    eval_json = evaluate_text_answer(q_text, t_answer or "")
+
+                # Extract scores
+                overall_score = float(eval_json.get('score') or 0)
+                speaking_score = float((eval_json.get('breakdown') or {}).get('speaking') or 0)
+                content_score = float((eval_json.get('breakdown') or {}).get('content') or 0)
+                relevance_score = float((eval_json.get('breakdown') or {}).get('relevance') or 0)
+
+                ans = local_db.get(IA, answer_id)
+                if not ans:
+                    logger.error(f"❌ Answer {answer_id} not found for async update")
+                    return
+                ans.feedback = eval_json.get('feedback') or None
+                ans.score = overall_score
+                # prefer transcript from eval if present
+                ans.transcript_text = (eval_json.get('transcript') or ans.transcript_text or None)
+                ans.speaking_score = speaking_score
+                ans.content_score = content_score
+                ans.relevance_score = relevance_score
+                ans.strengths = eval_json.get('strengths') or []
+                ans.improvements = eval_json.get('improvements') or []
+                local_db.commit()
+                logger.info(f"✅ Async evaluation saved for answer {answer_id}")
+            except Exception as e:
+                local_db.rollback()
+                logger.error(f"❌ Async evaluation failed for answer {answer_id}: {e}")
+            finally:
+                local_db.close()
+
+        threading.Thread(
+            target=_run_eval_async,
+            args=(answer.id, question_text, audio_url, text_answer),
+            daemon=True,
+        ).start()
 
         response_data = {
             'audio_url': audio_url,
-            'evaluation': eval_json,
-            'message': 'Đã tải lên và đánh giá câu trả lời thành công',
+            'answer_id': answer.id,
+            'queued': True,
+            'message': 'Đã nhận câu trả lời và đang đánh giá ở nền',
             'next_question_available': interview_session.questions_asked < interview_session.question_limit
         }
         

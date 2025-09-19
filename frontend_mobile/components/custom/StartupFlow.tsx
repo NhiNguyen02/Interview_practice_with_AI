@@ -25,6 +25,7 @@ import { Asset } from 'expo-asset';
 import SplashScreen from '@/components/custom/SplashScreen';
 import OnboardingScreen from '@/components/custom/OnboardingScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 
 const bgImage = require('../../assets/images/background.png');
 
@@ -92,6 +93,8 @@ export default function StartupFlow({ children }: StartupFlowProps) {
         onFinish={async () => {
           await AsyncStorage.setItem('onboardingCompleted', 'true');
           setOnboardingCompleted(true);
+          // Sau khi hoàn tất Onboarding, chuyển sang màn hình đăng nhập
+          router.replace('/(auth)/login');
         }}
       />
     );

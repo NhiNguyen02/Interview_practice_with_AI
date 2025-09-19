@@ -135,7 +135,8 @@ export default function EditProfileScreen() {
         const uri = result.assets[0].uri;
         const res = await uploadAvatar(uri);
         setAvatarUrl(res.avatar_url);
-        await updateUser({ profilePicture: res.avatar_url });
+        // Cập nhật avatar cục bộ mà không điều hướng về Home
+        await updateUser({ profilePicture: res.avatar_url }, { silent: true });
       }
     } catch (e: any) {
       if (e?.name === 'TokenInvalid') {

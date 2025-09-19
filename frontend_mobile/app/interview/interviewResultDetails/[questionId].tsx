@@ -228,6 +228,10 @@ export default function ResultAnswerDetailScreen() {
             />
             <Text style={styles.feedbackTitle}>Phản hồi từ AI</Text>
           </View>
+          {/* Nội dung feedback tổng quan */}
+          {!!(detail?.feedback) && (
+            <Text style={styles.feedbackText}>{detail?.feedback}</Text>
+          )}
           
           <View style={styles.strengthsContainer}>
             <Text style={styles.strengthsTitle}>Điểm mạnh</Text>
@@ -421,6 +425,12 @@ const styles = StyleSheet.create({
     color: '#4DE9B1',
     fontSize: 16,
     fontWeight: '700',
+  },
+  feedbackText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
   },
   strengthsContainer: {
     marginBottom: 16,

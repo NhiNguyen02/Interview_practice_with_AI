@@ -30,7 +30,7 @@ type AuthContextType = {
   signUp: (email: string, password: string, username: string) => Promise<{ ok: true, user: User } | { ok: false, error: string }>;  // Hàm đăng ký
   signOut: () => Promise<void>;  // Hàm đăng xuất
   isAuthenticated: boolean;  // Trạng thái đã xác thực hay chưa
-  updateUser: (partial: Partial<User>) => Promise<void>;
+  updateUser: (partial: Partial<User>, options?: { silent?: boolean }) => Promise<void>;
   handleTokenInvalid: () => Promise<void>;
 };
 
@@ -152,8 +152,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Cập nhật state
       setUser(null);
       
-      // Điều hướng về màn hình đăng nhập 
-      router.replace('/(auth)');
+      // Điều hướng thẳng về màn hình đăng nhập để tránh redirect lặp
+      router.replace('/(auth)/login');
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -168,16 +168,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signUp,
     signOut,
     isAuthenticated: !!user,
-    updateUser: async (partial: Partial<User>) => {
+    updateUser: async (partial: Partial<User>, options?: { silent?: boolean }) => {
       setUser((prev) => {
-        const merged = { ...(prev || {} as User), ...partial } as User;
+        const merged = { ...(prev || ({} as User)), ...partial } as User;
         AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(merged));
-        
-        // Nếu đã cập nhật đầy đủ thông tin hồ sơ, chuyển về home
-        if (merged.profession && merged.experienceLevel) {
+
+        // Nếu không yêu cầu im lặng và đã cập nhật đầy đủ thông tin hồ sơ, chuyển về home
+        if (!options?.silent && merged.profession && merged.experienceLevel) {
           router.replace('/(tabs)/home');
         }
-        
+
         return merged;
       });
     },

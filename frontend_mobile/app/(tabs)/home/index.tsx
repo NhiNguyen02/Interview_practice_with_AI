@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,7 @@ export default function HomeScreen() {
   const [historyData, setHistoryData] = useState<HistoryItem[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const inFlightRef = useRef(false);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -42,6 +43,9 @@ export default function HomeScreen() {
 
   const loadData = useCallback(async () => {
     try {
+      if (!user) return;
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
       setIsLoading(true);
       const [historyResponse, statsResponse] = await Promise.all([
         getInterviewHistory(),
@@ -55,12 +59,11 @@ export default function HomeScreen() {
       }
     } finally {
       setIsLoading(false);
+      inFlightRef.current = false;
     }
-  }, [handleTokenInvalid]);
+  }, [handleTokenInvalid, user]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  // Remove mount-trigger; rely only on focus-based refresh to avoid duplicate calls
 
   // Refresh data when tab is focused
   useFocusEffect(

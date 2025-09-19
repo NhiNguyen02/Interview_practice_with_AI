@@ -120,7 +120,7 @@ def get_interview_detail(current_user, session_id):
         
         for i, question in enumerate(questions):
             answer = next((a for a in answers if a.question_id == question.id), None)
-            score = answer.score if answer else 0
+            score = (answer.score if answer else 0) or 0
             total_score += score
             
             qa_items.append({

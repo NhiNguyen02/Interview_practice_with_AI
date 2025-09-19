@@ -278,11 +278,16 @@ export type InterviewHistoryResponse = {
 
 export async function getInterviewHistory(): Promise<InterviewHistoryResponse> {
   const token = await AsyncStorage.getItem('@preptalk_token');
+  if (!token) {
+    const err: any = new Error('Token missing');
+    err.name = 'TokenInvalid';
+    throw err;
+  }
   const res = await fetch(`${API_URL}/interviews/history`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      Authorization: `Bearer ${token}`,
     },
   });
   return handleResponse(res);
@@ -308,11 +313,16 @@ export type StatsResponse = {
 
 export async function getUserStats(): Promise<StatsResponse> {
   const token = await AsyncStorage.getItem('@preptalk_token');
+  if (!token) {
+    const err: any = new Error('Token missing');
+    err.name = 'TokenInvalid';
+    throw err;
+  }
   const res = await fetch(`${API_URL}/interviews/stats`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      Authorization: `Bearer ${token}`,
     },
   });
   return handleResponse(res);

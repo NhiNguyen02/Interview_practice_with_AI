@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { getNextQuestion, submitAnswer, finishInterview } from '@/services/interviewService';
 import BackgroundContainer from '@/components/common/BackgroundContainer';
 import { useTheme } from '@/context/ThemeContext';
@@ -54,6 +55,10 @@ export default function VoiceInterviewScreen() {
   const [showCancelPopup, setShowCancelPopup] = useState(false);
   const [questionId, setQuestionId] = useState<number | null>(null);
   const [isFinished, setIsFinished] = useState(false);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [evalCountdown, setEvalCountdown] = useState<number>(0);
+  const evalIntervalRef = useRef<NodeJS.Timeout | number | null>(null);
+  const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
 
   // audio recording/playback state
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -77,21 +82,7 @@ export default function VoiceInterviewScreen() {
     const s = sec % 60;
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
-  useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setTimer(t => {
-        if (t <= 1) {
-          clearInterval(intervalRef.current!);
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
+  // Remove incorrect global timer; recording timer handled in [phase] effect
   useEffect(() => {
   if (interviewCountdown <= 0) return;
 
@@ -145,10 +136,17 @@ export default function VoiceInterviewScreen() {
   useEffect(() => {
     if (questionText) {
       Speech.stop();
-      Speech.speak(questionText, { language: 'vi-VN' });
+      Speech.speak(questionText, {
+        language: 'vi-VN',
+        onStart: () => setIsSpeakingQuestion(true),
+        onDone: () => setIsSpeakingQuestion(false),
+        onStopped: () => setIsSpeakingQuestion(false),
+        onError: () => setIsSpeakingQuestion(false),
+      });
     }
     return () => {
       Speech.stop();
+      setIsSpeakingQuestion(false);
     };
   }, [questionText]);
 
@@ -192,6 +190,14 @@ export default function VoiceInterviewScreen() {
     try {
       // stop question TTS so it doesn't overlap with recording
       Speech.stop();
+      setIsSpeakingQuestion(false);
+      if (sound) {
+        try { await sound.stopAsync(); } catch {}
+        try { await sound.unloadAsync(); } catch {}
+        setSound(null);
+      }
+      // reset recording timer for a new recording
+      setTimer(0);
       await Audio.requestPermissionsAsync();
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
       const { recording } = await Audio.Recording.createAsync(
@@ -221,9 +227,23 @@ export default function VoiceInterviewScreen() {
   const onReplay = async () => {
     try {
       if (!recordingUri) return;
-      const { sound } = await Audio.Sound.createAsync({ uri: recordingUri });
-      setSound(sound);
-      await sound.playAsync();
+      // stop TTS if speaking
+      Speech.stop();
+      setIsSpeakingQuestion(false);
+      if (sound) {
+        const status = await sound.getStatusAsync();
+        if (status.isLoaded) {
+          if (status.isPlaying) {
+            await sound.stopAsync();
+            return;
+          }
+          await sound.replayAsync();
+          return;
+        }
+      }
+      const { sound: newSound } = await Audio.Sound.createAsync({ uri: recordingUri });
+      setSound(newSound);
+      await newSound.playAsync();
     } catch (e) {
       console.error('Replay failed', e);
     }
@@ -239,14 +259,30 @@ export default function VoiceInterviewScreen() {
     } catch {}
     setRecordingUri(null);
     setTranscript('');
+    setTimer(0);
     setPhase('idle');
   };
 
   const onSpeakQuestion = () => {
-    if (questionText) {
+    if (!questionText) return;
+    // toggle TTS like in interviewResultDetails
+    if (isSpeakingQuestion) {
       Speech.stop();
-      Speech.speak(questionText, { language: 'vi-VN' });
+      setIsSpeakingQuestion(false);
+      return;
     }
+    // ensure answer playback is stopped before speaking
+    if (sound) {
+      sound.stopAsync().catch(() => {});
+    }
+    Speech.stop();
+    Speech.speak(questionText, {
+      language: 'vi-VN',
+      onStart: () => setIsSpeakingQuestion(true),
+      onDone: () => setIsSpeakingQuestion(false),
+      onStopped: () => setIsSpeakingQuestion(false),
+      onError: () => setIsSpeakingQuestion(false),
+    });
   };
 
   const onSubmit = async () => {
@@ -282,6 +318,7 @@ export default function VoiceInterviewScreen() {
     try {
       // stop any ongoing question reading before skipping
       Speech.stop();
+      setIsSpeakingQuestion(false);
       if (!sessionId || !questionId) return;
       await submitAnswer({
         sessionId: String(sessionId),
@@ -311,6 +348,7 @@ export default function VoiceInterviewScreen() {
   const onSkipFinish = async () => {
     try {
       Speech.stop();
+      setIsSpeakingQuestion(false);
       if (sessionId && questionId) {
         await submitAnswer({
           sessionId: String(sessionId),
@@ -324,6 +362,31 @@ export default function VoiceInterviewScreen() {
       await finishAndShowPopup();
     }
   };
+
+  // Stop audio (Speech or Sound) when screen loses focus or unmounts
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        Speech.stop();
+        setIsSpeakingQuestion(false);
+        if (sound) {
+          sound.stopAsync().catch(() => {});
+          sound.unloadAsync().catch(() => {});
+          setSound(null);
+        }
+      };
+    }, [sound])
+  );
+
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+      setIsSpeakingQuestion(false);
+      if (sound) {
+        sound.unloadAsync().catch(() => {});
+      }
+    };
+  }, [sound]);
 
   return (
     <AppLayout>
@@ -471,9 +534,25 @@ export default function VoiceInterviewScreen() {
           visible={showEndPopup}
           title="Hoàn thành phỏng vấn"
           message="Bạn đã hoàn thành phiên phỏng vấn. Bây giờ bạn có thể xem kết quả phân tích và nhận phản hồi chi tiết."
-          buttonText="Xem kết quả"
+          buttonText={isEvaluating ? `Đang phân tích câu trả lời ${evalCountdown}s` : 'Xem kết quả'}
           onClose={async () => {
-            setShowEndPopup(false);
+            if (isEvaluating) return; // prevent multiple taps
+            setIsEvaluating(true);
+            // start 10s countdown immediately
+            setEvalCountdown(10);
+            if (evalIntervalRef.current) clearInterval(evalIntervalRef.current as any);
+            evalIntervalRef.current = setInterval(() => {
+              setEvalCountdown((prev) => {
+                const next = prev - 1;
+                if (next <= 0) {
+                  if (evalIntervalRef.current) clearInterval(evalIntervalRef.current as any);
+                  return 0;
+                }
+                return next;
+              });
+            }, 1000) as unknown as NodeJS.Timeout;
+
+            const start = Date.now();
             try {
               if (sessionId && !isFinished) {
                 await finishInterview(String(sessionId));
@@ -482,11 +561,19 @@ export default function VoiceInterviewScreen() {
             } catch (e) {
               // ignore
             }
-            if (sessionId) {
-              router.push({ pathname: '/interview/interviewResult', params: { id: String(sessionId), completed: '1' } });
-            } else {
-              router.push('/interview/interviewResult');
-            }
+
+            const elapsed = Date.now() - start;
+            const remaining = Math.max(0, 10000 - elapsed);
+            setTimeout(() => {
+              if (evalIntervalRef.current) clearInterval(evalIntervalRef.current as any);
+              setShowEndPopup(false);
+              if (sessionId) {
+                router.push({ pathname: '/interview/interviewResult', params: { id: String(sessionId), completed: '1' } });
+              } else {
+                router.push('/interview/interviewResult');
+              }
+              setIsEvaluating(false);
+            }, remaining);
           }}
           type="success"
         />

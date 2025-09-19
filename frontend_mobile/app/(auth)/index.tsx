@@ -1,30 +1,10 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Redirect, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useEffect } from 'react';
 
-// Chuyển hướng từ /auth đến /auth/login
+// Chuyển hướng từ /(auth) → /(auth)/login
 export default function AuthIndex() {
-  
- useEffect(() => {
-    const checkFirstLaunch = async () => {
-      try {
-        const hasLaunched = await AsyncStorage.getItem('hasLaunched');
-        if (hasLaunched) {
-          // Đã từng mở app → đi thẳng login
-          router.replace('/(auth)/login');
-        } else {
-          // Lần đầu mở app → đánh dấu đã mở → vào register
-          await AsyncStorage.setItem('hasLaunched', 'true');
-          router.replace('/(auth)/register');
-        }
-      } catch (err) {
-        console.error(err);
-        router.replace('/(auth)/login'); // fallback
-      }
-    };
-
-    checkFirstLaunch();
+  useEffect(() => {
+    router.replace('/(auth)/login');
   }, []);
-
-  return null; // không render gì cả
+  return null;
 }

@@ -24,16 +24,29 @@ def chat_with_bot(current_user):
         logger.error('GEMINI_API_KEY not configured')
         return jsonify({'error': 'GEMINI_API_KEY not configured'}), 500
 
+    # Prompt nâng cao: hiểu ngữ cảnh, tận dụng previous_answer nếu user tham chiếu
     prompt = (
-        "Bạn là một trợ lý phỏng vấn thông minh. Chỉ trả lời các câu hỏi liên quan đến "
-        "phỏng vấn, tuyển dụng, CV và kỹ năng xin việc. Nếu câu hỏi nằm ngoài các "
-        "chủ đề trên, hãy trả lời: 'Xin lỗi, tôi chỉ có thể hỗ trợ các câu hỏi về phỏng vấn. "
-        "Tôi có thể hỗ trợ về chuẩn bị CV, kỹ năng phỏng vấn và các câu hỏi tuyển dụng. "
-        "Ví dụ: \"Cách trả lời điểm mạnh của bản thân?\", \"CV nên có những mục gì?\", \"Những câu hỏi phỏng vấn Java phổ biến?\"'\n"
+        "Bạn là một trợ lý phỏng vấn thông minh, chỉ hỗ trợ các chủ đề liên quan đến "
+        "phỏng vấn, tuyển dụng, CV và kỹ năng xin việc. Nếu câu hỏi nằm ngoài các chủ đề trên, "
+        "hãy lịch sự từ chối và gợi ý các chủ đề phù hợp (ví dụ: chuẩn bị CV, kỹ năng trả lời, câu hỏi phổ biến theo lĩnh vực).\n\n"
+        "Hướng dẫn xử lý ngữ cảnh:\n"
+        "- Nếu người dùng tham chiếu tới một câu hỏi trong lịch sử (ví dụ: 'câu đầu tiên', 'câu 1', 'câu thứ hai', 'câu trước đó', 'câu hỏi về X'), "
+        "hãy tìm câu tương ứng trong previous_answer (nếu có) và đưa ra hướng dẫn trả lời cụ thể cho đúng câu đó.\n"
+        "- Nếu không tìm thấy câu phù hợp trong previous_answer, hoặc câu hiện tại không liên quan, hãy trả lời bình thường theo chủ đề phỏng vấn.\n"
+        "- Trả lời bằng tiếng Việt, ngắn gọn, hữu ích, có thể kèm ví dụ/điểm chính.\n"
     )
+
     if previous_answer:
-        prompt += f"Câu trả lời trước: {previous_answer}\n"
-    prompt += f"Câu hỏi: {question}\nTrả lời bằng tiếng Việt, ngắn gọn và hữu ích."
+        prompt += (
+            "\nDữ liệu ngữ cảnh (previous_answer - có thể là danh sách câu hỏi/đáp án trước đây, nhớ phân tích từ khóa/Thứ tự):\n"
+            f"{previous_answer}\n"
+        )
+
+    prompt += (
+        "\nCâu hỏi hiện tại của người dùng: "
+        f"{question}\n"
+        "Hãy trả lời bám sát yêu cầu trên."
+    )
 
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
     endpoint = (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   View,
   Text, 
@@ -48,10 +48,13 @@ export default function HistoryScreen() {
     currentWeekSessions: 0
   });
   const [loading, setLoading] = useState(true);
+  const inFlightRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchHistoryData = useCallback(async () => {
     try {
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
       setLoading(true);
       setError(null);
       const response = await getInterviewHistory();
@@ -63,13 +66,12 @@ export default function HistoryScreen() {
       Alert.alert('Lỗi', 'Không thể tải lịch sử phỏng vấn. Vui lòng thử lại.');
     } finally {
       setLoading(false);
+      inFlightRef.current = false;
     }
   }, []);
 
   // Fetch history data on mount
-  useEffect(() => {
-    fetchHistoryData();
-  }, [fetchHistoryData]);
+  // Remove mount-trigger; rely on focus refresh to avoid duplicate calls
 
   // Refresh data when tab is focused
   useFocusEffect(

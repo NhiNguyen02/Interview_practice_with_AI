@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import logging
 from flask import Blueprint, request, jsonify
-from app.database import get_session, InterviewSession
+from app.database import get_session, InterviewSession, InterviewQuestion, InterviewAnswer
 from app.utils import token_required
 from .utils import summarize_transcript
 
@@ -116,7 +116,7 @@ def finish_session(current_user, session_id):
 
         # Calculate scores and statistics
         total_score = sum(a.score or 0 for a in answers)
-        max_possible_score = len(answers) * 5
+        max_possible_score = len(answers) * 10
         average_score = total_score / len(answers) if answers else 0
         score_percentage = (total_score / max_possible_score) * 100 if max_possible_score > 0 else 0
 
